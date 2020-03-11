@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="D:/data/workspace/lwjgl_gles_vr_framework/lib/windows"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/joml-1.9.14.jar" sourcepath="lib/joml-1.9.14-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/lwjgl_gles_vr_framework/lib/joml-1.9.14-javadoc.jar!/"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lwjgl_gles_vr_framework/lib/windows"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/lwjgl-egl.jar" sourcepath="lib/lwjgl-egl-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/lwjgl_gles_vr_framework/lib/lwjgl-egl-javadoc.jar!/"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lwjgl_gles_vr_framework/lib/windows"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/lwjgl-glfw.jar" sourcepath="lib/lwjgl-glfw-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/lwjgl_gles_vr_framework/lib/lwjgl-glfw-javadoc.jar!/"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lwjgl_gles_vr_framework/lib/windows"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/lwjgl-opengles.jar" sourcepath="lib/lwjgl-opengles-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/lwjgl_gles_vr_framework/lib/lwjgl-opengles-javadoc.jar!/"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lwjgl_gles_vr_framework/lib/windows"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/lwjgl-openvr.jar" sourcepath="lib/lwjgl-openvr-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/lwjgl_gles_vr_framework/lib/lwjgl-openvr-javadoc.jar!/"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lwjgl_gles_vr_framework/lib/windows"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/lwjgl.jar" sourcepath="lib/lwjgl-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/lwjgl_gles_vr_framework/lib/lwjgl-javadoc.jar!/"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lwjgl_gles_vr_framework/lib/windows"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
