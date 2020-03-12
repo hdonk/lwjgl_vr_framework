@@ -1,20 +1,34 @@
 package lwjgl_gles_vr_framework;
 
+import static org.lwjgl.opengles.GLES20.GL_RGBA;
+import static org.lwjgl.opengles.GLES20.GL_UNSIGNED_BYTE;
+import static org.lwjgl.opengles.GLES20.glReadPixels;
 import static org.lwjgl.opengles.GLES30.glBindVertexArray;
 
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.Writer;
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -36,9 +50,10 @@ import static org.lwjgl.glfw.Callbacks.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFWNativeEGL.*;
 import static org.lwjgl.egl.EGL10.*;
-import static org.lwjgl.opengles.GLES20.*;
+import static org.lwjgl.opengles.GLES32.*;
 import static org.lwjgl.system.MemoryStack.*;
 import static org.lwjgl.system.MemoryUtil.*;
+import org.lwjgl.system.APIUtil.*;
 
 public class lwjgl_gles_vr_test implements Runnable
 {
@@ -68,6 +83,8 @@ public class lwjgl_gles_vr_test implements Runnable
 	private float m_Pointsize;
 	private long lastTime;
 	private boolean m_stoprotation;
+	
+	int m_fbo;
 
 	private void render(EGLCapabilities egl, GLESCapabilities gles) {
 
@@ -426,6 +443,147 @@ public class lwjgl_gles_vr_test implements Runnable
 		return program;
 	}
 
+    private static void printDetail(PrintStream stream, String type, String message) {
+        stream.printf("\t%s: %s\n", type, message);
+    }
+
+    private static String getDebugSource(int source) {
+        switch (source) {
+            case GL_DEBUG_SOURCE_API:
+                return "API";
+            case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+                return "WINDOW SYSTEM";
+            case GL_DEBUG_SOURCE_SHADER_COMPILER:
+                return "SHADER COMPILER";
+            case GL_DEBUG_SOURCE_THIRD_PARTY:
+                return "THIRD PARTY";
+            case GL_DEBUG_SOURCE_APPLICATION:
+                return "APPLICATION";
+            case GL_DEBUG_SOURCE_OTHER:
+                return "OTHER";
+            default:
+                return APIUtil.apiUnknownToken(source);
+        }
+    }
+
+    private static String getDebugType(int type) {
+        switch (type) {
+            case GL_DEBUG_TYPE_ERROR:
+                return "ERROR";
+            case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+                return "DEPRECATED BEHAVIOR";
+            case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+                return "UNDEFINED BEHAVIOR";
+            case GL_DEBUG_TYPE_PORTABILITY:
+                return "PORTABILITY";
+            case GL_DEBUG_TYPE_PERFORMANCE:
+                return "PERFORMANCE";
+            case GL_DEBUG_TYPE_OTHER:
+                return "OTHER";
+            case GL_DEBUG_TYPE_MARKER:
+                return "MARKER";
+            default:
+                return APIUtil.apiUnknownToken(type);
+        }
+    }
+
+    private static String getDebugSeverity(int severity) {
+        switch (severity) {
+            case GL_DEBUG_SEVERITY_HIGH:
+                return "HIGH";
+            case GL_DEBUG_SEVERITY_MEDIUM:
+                return "MEDIUM";
+            case GL_DEBUG_SEVERITY_LOW:
+                return "LOW";
+            case GL_DEBUG_SEVERITY_NOTIFICATION:
+                return "NOTIFICATION";
+            default:
+                return APIUtil.apiUnknownToken(severity);
+        }
+    }
+
+	
+	
+	int m_FBOheight = 1080;
+	int m_FBOwidth = 1920;
+
+	int makeFBOTexture(int a_width, int a_height)
+	{
+		int l_fbo;
+		int l_FBOTexture;
+		int l_depthbuffer;
+		
+		l_fbo = glGenFramebuffers();
+		glBindFramebuffer(GL_FRAMEBUFFER, l_fbo);
+		if (!GLok("Bind Framebuffer"))
+			return 0;
+		
+		l_depthbuffer = glGenRenderbuffers();
+		if (!GLok("glGenRenderbuffers"))
+			return 0;
+		glBindRenderbuffer(GL_RENDERBUFFER, l_depthbuffer);
+		if (!GLok("l_depthbuffer"))
+			return 0;
+	
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, a_width, a_height);
+		if (!GLok("glRenderbufferStorage"))
+			return 0;
+
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, l_depthbuffer);
+		if (!GLok("glFramebufferRenderbuffer"))
+			return 0;
+
+		l_FBOTexture = glGenTextures();
+		if (!GLok("glGenTextures"))
+			return 0;
+		glBindTexture(GL_TEXTURE_2D, l_FBOTexture);
+		if (!GLok("glBindTexture"))
+			return 0;
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		if (!GLok("glTexParameterf"))
+			return 0;
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, a_width, a_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, (java.nio.ByteBuffer)null);
+		if (!GLok("glTexImage2D"))
+			return 0;
+		
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, l_FBOTexture, 0);
+		if (!GLok("glFramebufferTexture2D"))
+			return 0;
+		
+		int l_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if(l_err == GL_FRAMEBUFFER_COMPLETE)
+		{
+			System.out.println("Framebuffer creation successful");
+			return l_fbo;
+		}
+		else
+		{
+			System.out.println("Failed to create FBO: "+l_err);
+			return 0;
+		}
+	}
+	
+	BufferedImage getBufferedImageFromFBO(int a_width, int a_height)
+	{
+		ByteBuffer l_buffer = BufferUtils.createByteBuffer(a_width * a_height * 4);
+		glReadPixels(0, 0, a_width, a_height, GL_RGBA, GL_UNSIGNED_BYTE, l_buffer);
+		GLok("glReadPixels");
+		BufferedImage l_image = new BufferedImage(a_width, a_height, BufferedImage.TYPE_3BYTE_BGR);
+		byte[] array = ((DataBufferByte) l_image.getRaster().getDataBuffer()).getData();
+		for(int y = 0; y < a_height; ++y)
+		{
+			for(int x = 0; x < a_width; ++x)
+			{
+				int i = (y*a_width + x)*3;
+				int j = ((a_height-y-1)*a_width + x)*4;
+				array[i+0] = l_buffer.get(j+2);
+				array[i+1] = l_buffer.get(j+1);
+				array[i+2] = l_buffer.get(j+0);
+			}
+		}
+		return l_image;
+	}
+	
 	@Override
 	public void run()
 	{
@@ -578,6 +736,22 @@ public class lwjgl_gles_vr_test implements Runnable
 			}
 		}
 		
+        GLDebugMessageCallback proc = GLDebugMessageCallback.create((source, type, id, severity, length, message, userParam) -> {
+            System.err.println("[LWJGL] OpenGL debug message");
+            printDetail(System.err, "ID", String.format("0x%X", id));
+            printDetail(System.err, "Source", getDebugSource(source));
+            printDetail(System.err, "Type", getDebugType(type));
+            printDetail(System.err, "Severity", getDebugSeverity(severity));
+            printDetail(System.err, "Message", GLDebugMessageCallback.getMessage(length, message));
+        });
+        
+        glDebugMessageCallback(proc, NULL);		
+        
+        glEnable(GL_DEBUG_OUTPUT);
+
+        m_fbo = makeFBOTexture(m_FBOwidth, m_FBOheight);
+		if(m_fbo == 0) System.exit(1);
+		
 		glfwShowWindow(m_window);
 		
 		while (!glfwWindowShouldClose(m_window)) {
@@ -609,9 +783,11 @@ public class lwjgl_gles_vr_test implements Runnable
 				}
 			} else {*/
 				//System.out.println("Render");
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			
 				render(m_egl, m_gles);
 				//System.out.println("Rendered");
-	
+				
 				glfwSwapBuffers(m_window);
 				
 	//		}
@@ -622,6 +798,7 @@ public class lwjgl_gles_vr_test implements Runnable
 		glfwFreeCallbacks(m_window);
 		glfwTerminate();
 		m_finished = true;
+		System.exit(0);
 	}
 
 	
