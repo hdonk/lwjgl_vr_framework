@@ -537,7 +537,7 @@ public class lwjgl_gles_vr_test implements Runnable
 		glBindFramebuffer(GL_FRAMEBUFFER, l_fbo);
 		if (!GLok("Bind Framebuffer"))
 			return 0;
-		/*
+		
 		l_depthbuffer = glGenRenderbuffers();
 		if (!GLok("glGenRenderbuffers"))
 			return 0;
@@ -552,7 +552,7 @@ public class lwjgl_gles_vr_test implements Runnable
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, l_depthbuffer);
 		if (!GLok("glFramebufferRenderbuffer"))
 			return 0;
-*/
+
 		m_FBOTexture = glGenTextures();
 		if (!GLok("glGenTextures"))
 			return 0;
@@ -846,7 +846,7 @@ public class lwjgl_gles_vr_test implements Runnable
 				
 				int l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Left, l_left_tx, null, VR.EVRSubmitFlags_Submit_GlRenderBuffer);
 				if(l_ret!=0) System.err.println("Left sub said: "+l_ret);
-				l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_right_tx, null, VR.EVRSubmitFlags_Submit_Default);
+				l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_right_tx, null, VR.EVRSubmitFlags_Submit_GlRenderBuffer);
 				if(l_ret!=0) System.err.println("Right sub said: "+l_ret);
 				
 //		}
