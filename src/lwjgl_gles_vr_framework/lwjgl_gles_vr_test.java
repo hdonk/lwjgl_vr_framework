@@ -58,16 +58,31 @@ import org.lwjgl.system.APIUtil.*;
 import org.lwjgl.openvr.*;
 import static org.lwjgl.openvr.VR.*;
 import static org.lwjgl.openvr.VRSystem.*;
+import org.lwjgl.openvr.HmdMatrix34;
+import org.lwjgl.openvr.HmdMatrix44;
+import org.lwjgl.openvr.TrackedDevicePose;
+import org.lwjgl.openvr.VR;
+import org.lwjgl.openvr.VRCompositor;
+import org.lwjgl.openvr.VRSystem;
 
 public class lwjgl_gles_vr_test implements Runnable
 {
 
 	public static void main(String[] args) {
 		System.out.println("Welcome!");
+		
+		Configuration.DISABLE_CHECKS.set(false);
+		Configuration.DEBUG.set(true);
+		Configuration.DEBUG_LOADER.set(true);
+		Configuration.DEBUG_MEMORY_ALLOCATOR.set(true);
+		Configuration.DEBUG_STACK.set(true);
+		Configuration.DEBUG_STREAM.set(System.err);
 
 		System.loadLibrary("libGLESv2");
 		System.loadLibrary("libEGL");
-
+		
+//		System.loadLibrary("vrclient_x64");
+		
 		lwjgl_gles_vr_test l_lgvt = new lwjgl_gles_vr_test();
 		l_lgvt.run();
 	}
@@ -522,7 +537,7 @@ public class lwjgl_gles_vr_test implements Runnable
 		glBindFramebuffer(GL_FRAMEBUFFER, l_fbo);
 		if (!GLok("Bind Framebuffer"))
 			return 0;
-		
+		/*
 		l_depthbuffer = glGenRenderbuffers();
 		if (!GLok("glGenRenderbuffers"))
 			return 0;
@@ -537,16 +552,26 @@ public class lwjgl_gles_vr_test implements Runnable
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, l_depthbuffer);
 		if (!GLok("glFramebufferRenderbuffer"))
 			return 0;
-
+*/
 		m_FBOTexture = glGenTextures();
 		if (!GLok("glGenTextures"))
 			return 0;
 		glBindTexture(GL_TEXTURE_2D, m_FBOTexture);
 		if (!GLok("glBindTexture"))
 			return 0;
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		if (!GLok("glTexParameterf"))
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		if (!GLok("GL_TEXTURE_MIN_FILTER"))
 			return 0;
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		if (!GLok("GL_TEXTURE_MAG_FILTER"))
+			return 0;
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+		if (!GLok("GL_TEXTURE_BASE_LEVEL"))
+			return 0;
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		if (!GLok("GL_TEXTURE_MAX_LEVEL"))
+			return 0;
+		
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, a_width, a_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, (java.nio.ByteBuffer)null);
 		if (!GLok("glTexImage2D"))
 			return 0;
@@ -613,24 +638,19 @@ public class lwjgl_gles_vr_test implements Runnable
 			int token = VR_InitInternal(peError, VR.EVRApplicationType_VRApplication_Scene);
 			if (peError.get(0) == 0)
 			{
-				try {
-					OpenVR.create(token);
-		  			System.err.println("Model Number : " +
-		  					VRSystem_GetStringTrackedDeviceProperty( k_unTrackedDeviceIndex_Hmd, ETrackedDeviceProperty_Prop_ModelNumber_String, peError));
-		  			System.err.println("Serial Number: " +
-		  					VRSystem_GetStringTrackedDeviceProperty( k_unTrackedDeviceIndex_Hmd, ETrackedDeviceProperty_Prop_SerialNumber_String, peError));
+				OpenVR.create(token);
+	  			System.err.println("Model Number : " +
+	  					VRSystem_GetStringTrackedDeviceProperty( k_unTrackedDeviceIndex_Hmd, ETrackedDeviceProperty_Prop_ModelNumber_String, peError));
+	  			System.err.println("Serial Number: " +
+	  					VRSystem_GetStringTrackedDeviceProperty( k_unTrackedDeviceIndex_Hmd, ETrackedDeviceProperty_Prop_SerialNumber_String, peError));
 
-		  			IntBuffer w = stack.mallocInt(1);
-		  			IntBuffer h = stack.mallocInt(1);
-		  			VRSystem_GetRecommendedRenderTargetSize(w, h);
-		  			System.err.println("Recommended width : " + w.get(0));
-		  			System.err.println("Recommended height: " + h.get(0));
-		  			m_FBOwidth = w.get(0);
-		  			m_FBOheight = h.get(0);
-				} finally
-				{
-					VR_ShutdownInternal();
-				}
+	  			IntBuffer w = stack.mallocInt(1);
+	  			IntBuffer h = stack.mallocInt(1);
+	  			VRSystem_GetRecommendedRenderTargetSize(w, h);
+	  			System.err.println("Recommended width : " + w.get(0));
+	  			System.err.println("Recommended height: " + h.get(0));
+	  			m_FBOwidth = w.get(0);
+	  			m_FBOheight = h.get(0);
 			} else
 			{
 				System.out.println("INIT ERROR SYMBOL: " +
@@ -817,11 +837,18 @@ public class lwjgl_gles_vr_test implements Runnable
 				Texture l_left_tx = Texture.create();
 				Texture l_right_tx = Texture.create();
 				l_left_tx.set(m_FBOTexture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
-				l_right_tx.set(m_FBOTexture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
+				l_right_tx.set(m_fbo, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
 
-				VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Left, l_left_tx, null, VR.EVRSubmitFlags_Submit_GlRenderBuffer);
-				VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_right_tx, null, VR.EVRSubmitFlags_Submit_GlRenderBuffer);
-
+				TrackedDevicePose.Buffer tdpb = TrackedDevicePose.create(k_unMaxTrackedDeviceCount);
+				TrackedDevicePose.Buffer tdpb2 = TrackedDevicePose.create(k_unMaxTrackedDeviceCount);
+				 
+				VRCompositor.VRCompositor_WaitGetPoses(tdpb, tdpb2);
+				
+				int l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Left, l_left_tx, null, VR.EVRSubmitFlags_Submit_GlRenderBuffer);
+				if(l_ret!=0) System.err.println("Left sub said: "+l_ret);
+				l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_right_tx, null, VR.EVRSubmitFlags_Submit_Default);
+				if(l_ret!=0) System.err.println("Right sub said: "+l_ret);
+				
 //		}
 		}
 		glclear();
