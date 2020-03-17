@@ -1,9 +1,6 @@
-package lwjgl_gles_vr_framework;
+package lwjgl_vr_framework;
 
-import static org.lwjgl.opengles.GLES20.GL_RGBA;
-import static org.lwjgl.opengles.GLES20.GL_UNSIGNED_BYTE;
-import static org.lwjgl.opengles.GLES20.glReadPixels;
-import static org.lwjgl.opengles.GLES30.glBindVertexArray;
+import static org.lwjgl.opengl.GL43.*;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -32,25 +29,22 @@ import javax.swing.JPanel;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GL43;
+import org.lwjgl.opengl.GLDebugMessageCallback;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
 
-import org.lwjgl.opengles.*;
-import org.lwjgl.opengles.GLES.*;
-//import org.lwjgl.opengles.GLES32.*;
-import org.lwjgl.opengles.OESMapbuffer.*;
 import org.lwjgl.system.*;
-import org.lwjgl.egl.*;
+//import org.lwjgl.egl.*;
 import org.lwjgl.glfw.*;
-//import org.lwjgl.opengl.GLUtil.*;
 
 import static org.lwjgl.glfw.Callbacks.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFWNativeEGL.*;
-import static org.lwjgl.egl.EGL10.*;
-import static org.lwjgl.opengles.GLES32.*;
+//import static org.lwjgl.egl.EGL10.*;
 import static org.lwjgl.system.MemoryStack.*;
 import static org.lwjgl.system.MemoryUtil.*;
 import org.lwjgl.system.APIUtil.*;
@@ -65,7 +59,7 @@ import org.lwjgl.openvr.VR;
 import org.lwjgl.openvr.VRCompositor;
 import org.lwjgl.openvr.VRSystem;
 
-public class lwjgl_gles_vr_test implements Runnable
+public class lwjgl_vr_test implements Runnable
 {
 
 	public static void main(String[] args) {
@@ -78,20 +72,20 @@ public class lwjgl_gles_vr_test implements Runnable
 		Configuration.DEBUG_STACK.set(true);
 		Configuration.DEBUG_STREAM.set(System.err);
 
-		System.loadLibrary("libGLESv2");
-		System.loadLibrary("libEGL");
+//		System.loadLibrary("libGLESv2");
+//		System.loadLibrary("libEGL");
 		
 //		System.loadLibrary("vrclient_x64");
 		
-		lwjgl_gles_vr_test l_lgvt = new lwjgl_gles_vr_test();
+		lwjgl_vr_test l_lgvt = new lwjgl_vr_test();
 		l_lgvt.run();
 	}
 
 	private int displayW;
 	private int displayH;
 	private long m_window;
-	private EGLCapabilities m_egl;
-	private GLESCapabilities m_gles;
+//	private EGLCapabilities m_egl;
+//	private GLESCapabilities m_gles;
 	private int m_main_program;
 	private int m_point_program;
 	private int m_point_program_col;
@@ -105,44 +99,65 @@ public class lwjgl_gles_vr_test implements Runnable
 	
 	int m_fbo;
 
-	private void render(EGLCapabilities egl, GLESCapabilities gles) {
+	private void render(/*EGLCapabilities egl, GLESCapabilities gles*/) {
 
 		int modelViewLoc;
 		int scaleLoc;
 
 		int errorCheckValue;
 
+		int VAO;
+		VAO = glGenVertexArrays();
+		glBindVertexArray(VAO);
+		
 		// Create a simple quad
 		int vbo = glGenBuffers();
 		int ibo = glGenBuffers();
 		float[] vertices = { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, // Red X
-				250.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+				1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
 				
 				0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,// Green Y
-				0.0f, 500.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+				0.0f, 2.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
 
 				0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, // Blue Z
-				0.0f, 0.0f, 250.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
 				0 };
 		int[] indices = { 1, 0, 2, 3, 4, 5 };
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		if(!GLok("glBindBuffer")) return;
 		glBufferData(GL_ARRAY_BUFFER, (FloatBuffer) BufferUtils.createFloatBuffer(vertices.length).put(vertices).flip(),
 				GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, false, 3 * 4 + 4 * 4, 0);
+		if(!GLok("glBufferData")) return;
+		
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 4, GL_FLOAT, false, 3 * 4 + 4 * 4, 3 * 4);
+		if(!GLok("glEnableVertexAttribArray")) return;
+		glVertexAttribPointer(0, 3, GL_FLOAT, false, 3 * 4 + 4 * 4, 0);
+		if(!GLok("glVertexAttribPointer")) return;
+		
 		glEnableVertexAttribArray(1);
+		if(!GLok("glEnableVertexAttribArray")) return;
+		glVertexAttribPointer(1, 4, GL_FLOAT, false, 3 * 4 + 4 * 4, 3 * 4);
+		if(!GLok("glVertexAttribPointer")) return;
+		
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+		if(!GLok("glBindBuffer")) return;
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
 				(IntBuffer) BufferUtils.createIntBuffer(indices.length).put(indices).flip(), GL_STATIC_DRAW);
+		if(!GLok("glBufferData")) return;
 
 		glClearColor(0.0f, 0.5f, 1.0f, 0.0f);
+		if(!GLok("glClearColor"))
+		{
+			return;
+		}
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		if(!GLok("glClear"))
+		{
+			return;
+		}
 		glViewport(0, 0, displayW, displayH);
-		errorCheckValue = glGetError();
-		if (errorCheckValue != GL_NO_ERROR) {
-			System.err.println("GL Error " + errorCheckValue);
-			Thread.dumpStack();
+		if(!GLok("glViewport"))
+		{
 			return;
 		}
 
@@ -150,9 +165,9 @@ public class lwjgl_gles_vr_test implements Runnable
 		glCullFace(GL_BACK);
 		glFrontFace(GL_CCW);
 
-		glDepthRangef(0.0f, 1.0f);
-		if (!GLok("Setting glDepthRange"))
-			return;
+		//glDepthRangef(0.0f, 1.0f);
+		//if (!GLok("Setting glDepthRange"))
+		//	return;
 		glEnable(GL_DEPTH_TEST);
 
 		glDisable(GL_CULL_FACE);
@@ -189,10 +204,10 @@ public class lwjgl_gles_vr_test implements Runnable
 		
 		
 		projectM
-				.setOrtho(-1000.0f/l_x_scale, 1000.0f/l_x_scale, -1000.0f/l_y_scale, 1000.0f/l_y_scale, -30000.0f, 30000.0f);
+				.setOrtho(-10.0f/l_x_scale, 10.0f/l_x_scale, -10.0f/l_y_scale, 10.0f/l_y_scale, -30.0f, 30.0f);
 		viewM.identity();
 		// User controlled front view
-		viewM.lookAt(0.0f, 5000.0f, 15000.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+		viewM.lookAt(0.0f, 0.0f, 15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
 		
 		// Corner view
 		//viewM.lookAt(0.0f, 100.0f, 100.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
@@ -312,6 +327,9 @@ public class lwjgl_gles_vr_test implements Runnable
 //		System.out.println("Rot: "+m_rot);
 		lastTime = thisTime;
 
+		glBindVertexArray(0);
+		glDeleteBuffers(vbo);
+		glDeleteBuffers(ibo);
 	}
 	
 	boolean GLok(String message) {
@@ -379,7 +397,7 @@ public class lwjgl_gles_vr_test implements Runnable
 		String vertexShader;
 		String fragmentShader;
 		int errorCheckValue;
-		String l_dir = "src/lwjgl_gles_vr_framework/";
+		String l_dir = "src/lwjgl_vr_framework/";
 		try {
 			Path currentRelativePath = Paths.get("");
 			String s = currentRelativePath.toAbsolutePath().toString();
@@ -466,6 +484,7 @@ public class lwjgl_gles_vr_test implements Runnable
         stream.printf("\t%s: %s\n", type, message);
     }
 
+    
     private static String getDebugSource(int source) {
         switch (source) {
             case GL_DEBUG_SOURCE_API:
@@ -529,8 +548,7 @@ public class lwjgl_gles_vr_test implements Runnable
 	
 	int makeFBOTexture(int a_width, int a_height)
 	{
-		int l_fbo;
-		
+		int l_fbo;		
 		int l_depthbuffer;
 		
 		l_fbo = glGenFramebuffers();
@@ -581,6 +599,14 @@ public class lwjgl_gles_vr_test implements Runnable
 			return 0;
 		
 		int l_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+		if (!GLok("glBindFramebuffer"))
+			return 0;
+		glBindTexture(GL_TEXTURE_2D, 0);
+		if (!GLok("glBindTexture"))
+			return 0;
+		
 		if(l_err == GL_FRAMEBUFFER_COMPLETE)
 		{
 			System.out.println("Framebuffer creation successful");
@@ -674,11 +700,15 @@ public class lwjgl_gles_vr_test implements Runnable
 			//glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
 	
 			// GLFW setup for EGL & OpenGL ES
-			glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
+/*			glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
 			glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);*/
 	
+			glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
 			m_window = glfwCreateWindow(displayW, displayH, "glpanel", NULL, NULL);
 			if (m_window == NULL) {
 				throw new RuntimeException("Failed to create the GLFW window");
@@ -702,17 +732,17 @@ public class lwjgl_gles_vr_test implements Runnable
 			});
 	
 			// EGL capabilities
-			long dpy = glfwGetEGLDisplay();
+			//long dpy = glfwGetEGLDisplay();
 	
 			try (MemoryStack stack = stackPush()) {
 				IntBuffer major = stack.mallocInt(1);
 				IntBuffer minor = stack.mallocInt(1);
 	
-				if (!eglInitialize(dpy, major, minor)) {
+/*				if (!eglInitialize(dpy, major, minor)) {
 					throw new IllegalStateException(String.format("Failed to initialize EGL [0x%X]", eglGetError()));
 				}
 	
-				m_egl = EGL.createDisplayCapabilities(dpy, major.get(0), minor.get(0));
+				m_egl = EGL.createDisplayCapabilities(dpy, major.get(0), minor.get(0));*/
 			}
 	/*
 			try {
@@ -730,7 +760,8 @@ public class lwjgl_gles_vr_test implements Runnable
 	*/
 			// OpenGL ES capabilities
 			glfwMakeContextCurrent(m_window);
-			m_gles = GLES.createCapabilities();
+			glfwSwapInterval(1);
+//			m_gles = GLES.createCapabilities();
 	/*
 			try {
 				System.out.println("OpenGL ES Capabilities:");
@@ -745,6 +776,8 @@ public class lwjgl_gles_vr_test implements Runnable
 				e.printStackTrace();
 			}
 	*/
+			GL.createCapabilities();
+			
 			System.out.println("GL_VENDOR: " + glGetString(GL_VENDOR));
 			System.out.println("GL_VERSION: " + glGetString(GL_VERSION));
 			System.out.println("GL_RENDERER: " + glGetString(GL_RENDERER));
@@ -752,7 +785,7 @@ public class lwjgl_gles_vr_test implements Runnable
 			m_main_program = shaderInit("mainVertexShader.glsl", "mainFragmentShader.glsl");
 			if (m_main_program == -1) {
 				System.err.println("Failed to initialise main shaders");
-				GLES.setCapabilities(null);
+//				GLES.setCapabilities(null);
 	
 				glfwFreeCallbacks(m_window);
 				glfwTerminate();
@@ -761,7 +794,7 @@ public class lwjgl_gles_vr_test implements Runnable
 			m_point_program = shaderInit("pointVertexShader.glsl", "pointFragmentShader.glsl");
 			if (m_point_program == -1) {
 				System.err.println("Failed to initialise point shaders");
-				GLES.setCapabilities(null);
+//				GLES.setCapabilities(null);
 	
 				glfwFreeCallbacks(m_window);
 				glfwTerminate();
@@ -770,7 +803,7 @@ public class lwjgl_gles_vr_test implements Runnable
 			m_point_program_col = shaderInit("pointVertexShaderCol.glsl", "pointFragmentShaderCol.glsl");
 			if (m_point_program_col == -1) {
 				System.err.println("Failed to initialise colored point shaders");
-				GLES.setCapabilities(null);
+//				GLES.setCapabilities(null);
 	
 				glfwFreeCallbacks(m_window);
 				glfwTerminate();
@@ -779,6 +812,7 @@ public class lwjgl_gles_vr_test implements Runnable
 		}
 		
         GLDebugMessageCallback proc = GLDebugMessageCallback.create((source, type, id, severity, length, message, userParam) -> {
+        	if(severity == GL_DEBUG_SEVERITY_NOTIFICATION) return;
             System.err.println("[LWJGL] OpenGL debug message");
             printDetail(System.err, "ID", String.format("0x%X", id));
             printDetail(System.err, "Source", getDebugSource(source));
@@ -826,35 +860,37 @@ public class lwjgl_gles_vr_test implements Runnable
 			} else {*/
 				// Screen
 				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				render(m_egl, m_gles);
+				render(/*m_egl, m_gles*/);
 				glfwSwapBuffers(m_window);
 				
 				// HMD
 				
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);				
-				render(m_egl, m_gles);
+				render(/*m_egl, m_gles*/);
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				
 				Texture l_left_tx = Texture.create();
 				Texture l_right_tx = Texture.create();
 				l_left_tx.set(m_FBOTexture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
-				l_right_tx.set(m_fbo, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
+				l_right_tx.set(m_FBOTexture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
 
 				TrackedDevicePose.Buffer tdpb = TrackedDevicePose.create(k_unMaxTrackedDeviceCount);
 				TrackedDevicePose.Buffer tdpb2 = TrackedDevicePose.create(k_unMaxTrackedDeviceCount);
 				 
 				VRCompositor.VRCompositor_WaitGetPoses(tdpb, tdpb2);
 				
-				int l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Left, l_left_tx, null, VR.EVRSubmitFlags_Submit_GlRenderBuffer);
-				if(l_ret!=0) System.err.println("Left sub said: "+l_ret);
-				l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_right_tx, null, VR.EVRSubmitFlags_Submit_GlRenderBuffer);
-				if(l_ret!=0) System.err.println("Right sub said: "+l_ret);
+				int l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Left, l_left_tx, null, VR.EVRSubmitFlags_Submit_Default);
+				System.err.println("Left sub said: "+l_ret);
+				l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_right_tx, null, VR.EVRSubmitFlags_Submit_Default);
+				System.err.println("Right sub said: "+l_ret);
 				
 //		}
 		}
 		glclear();
 		VR.VR_ShutdownInternal();
 	    glfwHideWindow(m_window);
-		GLES.setCapabilities(null);
+		//GLES.setCapabilities(null);
 		glfwFreeCallbacks(m_window);
 		glfwTerminate();
 		m_finished = true;
