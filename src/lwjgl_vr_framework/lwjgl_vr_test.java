@@ -1,4 +1,4 @@
-package lwjgl_gles_vr_framework;
+package lwjgl_vr_framework;
 
 import static org.lwjgl.opengles.GLES20.GL_RGBA;
 import static org.lwjgl.opengles.GLES20.GL_UNSIGNED_BYTE;
@@ -65,7 +65,7 @@ import org.lwjgl.openvr.VR;
 import org.lwjgl.openvr.VRCompositor;
 import org.lwjgl.openvr.VRSystem;
 
-public class lwjgl_gles_vr_test implements Runnable
+public class lwjgl_vr_test implements Runnable
 {
 
 	public static void main(String[] args) {
@@ -83,7 +83,7 @@ public class lwjgl_gles_vr_test implements Runnable
 		
 //		System.loadLibrary("vrclient_x64");
 		
-		lwjgl_gles_vr_test l_lgvt = new lwjgl_gles_vr_test();
+		lwjgl_vr_test l_lgvt = new lwjgl_vr_test();
 		l_lgvt.run();
 	}
 
@@ -379,7 +379,7 @@ public class lwjgl_gles_vr_test implements Runnable
 		String vertexShader;
 		String fragmentShader;
 		int errorCheckValue;
-		String l_dir = "src/lwjgl_gles_vr_framework/";
+		String l_dir = "src/lwjgl_vr_framework/";
 		try {
 			Path currentRelativePath = Paths.get("");
 			String s = currentRelativePath.toAbsolutePath().toString();
