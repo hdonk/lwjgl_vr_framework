@@ -59,6 +59,26 @@ import org.lwjgl.openvr.VR;
 import org.lwjgl.openvr.VRCompositor;
 import org.lwjgl.openvr.VRSystem;
 
+class Eye
+{
+	int m_eye;
+
+	int m_fbo;
+	int m_fbo_texture;
+
+	Matrix4f m_headposition_matrix;
+	Matrix4f m_projection_matrix;
+	Matrix4f m_eyetohead_matrix;
+	
+	Eye(int a_eye)
+	{
+		m_eye = a_eye;
+		m_headposition_matrix = new Matrix4f();
+		m_projection_matrix = new Matrix4f();
+		m_eyetohead_matrix = new Matrix4f();
+	}
+}
+
 public class lwjgl_vr_test implements Runnable
 {
 
@@ -96,10 +116,10 @@ public class lwjgl_vr_test implements Runnable
 	private float m_Pointsize;
 	private long lastTime;
 	private boolean m_stoprotation;
-	
-	int m_fbo;
 
-	private void render(/*EGLCapabilities egl, GLESCapabilities gles*/) {
+	Eye m_left_eye, m_right_eye;
+	
+	private void render(Eye a_eye) {
 
 		int modelViewLoc;
 		int scaleLoc;
@@ -145,18 +165,13 @@ public class lwjgl_vr_test implements Runnable
 				(IntBuffer) BufferUtils.createIntBuffer(indices.length).put(indices).flip(), GL_STATIC_DRAW);
 		if(!GLok("glBufferData")) return;
 
-		glClearColor(0.0f, 0.5f, 1.0f, 0.0f);
+		glClearColor(0.0f, 0.5f, 1.0f, 1.0f);
 		if(!GLok("glClearColor"))
 		{
 			return;
 		}
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		if(!GLok("glClear"))
-		{
-			return;
-		}
-		glViewport(0, 0, displayW, displayH);
-		if(!GLok("glViewport"))
 		{
 			return;
 		}
@@ -174,47 +189,13 @@ public class lwjgl_vr_test implements Runnable
 		if (!GLok("Disabling GL_CULL_FACE"))
 			return;
 
-		Matrix4f projectM = new Matrix4f();
-		Matrix4f viewM = new Matrix4f();
 		Matrix4f modelM = new Matrix4f();
 		Matrix4f modelView = new Matrix4f();
 		FloatBuffer fb = BufferUtils.createFloatBuffer(16);
 
-		float l_x_scale = 1.0f;
-		float l_y_scale = 1.0f;
-		if(displayW>displayH)
-		{
-			l_x_scale = (float)displayH/(float)displayW;
-		}
-		else
-		{
-			l_y_scale = (float)displayW/(float)displayH;			
-		}
-		
-		
-/*		
-		float aspect = width / height;
-		glViewport(0, 0, width, height);
-		if (aspect >= 1.0)
-		  glOrtho(-50.0 * aspect, 50.0 * aspect, -50.0, 50.0, 1.0, -1.0);
-		else
-		  glOrtho(-50.0, 50.0, -50.0 / aspect, 50.0 / aspect, 1.0, -1.0);*/
-		
-		
-		
-		
-		projectM
-				.setOrtho(-10.0f/l_x_scale, 10.0f/l_x_scale, -10.0f/l_y_scale, 10.0f/l_y_scale, -30.0f, 30.0f);
-		viewM.identity();
-		// User controlled front view
-		viewM.lookAt(0.0f, 0.0f, 15.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-		
-		// Corner view
-		//viewM.lookAt(0.0f, 100.0f, 100.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-		// Top view
-		//viewM.lookAt(0.0f, 1000.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 		modelM.identity();
 		Quaternionf q = new Quaternionf();
+		modelM.translate(0.0f, 0.0f, -5.0f);
 		modelM.rotate(q.rotateY((float) Math.toRadians(m_rot )).normalize());
 
 		glUseProgram(m_main_program);
@@ -224,8 +205,9 @@ public class lwjgl_vr_test implements Runnable
 		if (!GLok(""))
 			return;
 		modelView.identity();
-		modelView.mul(projectM);
-		modelView.mul(viewM);
+		modelView.mul(a_eye.m_projection_matrix);
+		modelView.mul(a_eye.m_eyetohead_matrix);
+		modelView.mul(a_eye.m_headposition_matrix);
 		modelView.mul(modelM);
 //		modelView = projectM.mul(viewM).mul(modelM);
 		glUniformMatrix4fv(modelViewLoc, false, modelView.get(fb));
@@ -540,82 +522,120 @@ public class lwjgl_vr_test implements Runnable
         }
     }
 
-	
-	
-	int m_FBOheight = 1080;
-	int m_FBOwidth = 1920;
-	int m_FBOTexture;
-	
-	int makeFBOTexture(int a_width, int a_height)
+	void makeFBOTexture(Eye a_eye, int a_width, int a_height)
 	{
-		int l_fbo;		
 		int l_depthbuffer;
 		
-		l_fbo = glGenFramebuffers();
-		glBindFramebuffer(GL_FRAMEBUFFER, l_fbo);
+		a_eye.m_fbo = glGenFramebuffers();
+		glBindFramebuffer(GL_FRAMEBUFFER, a_eye.m_fbo);
 		if (!GLok("Bind Framebuffer"))
-			return 0;
-		
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}		
 		l_depthbuffer = glGenRenderbuffers();
 		if (!GLok("glGenRenderbuffers"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 		glBindRenderbuffer(GL_RENDERBUFFER, l_depthbuffer);
 		if (!GLok("l_depthbuffer"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 	
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, a_width, a_height);
 		if (!GLok("glRenderbufferStorage"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, l_depthbuffer);
 		if (!GLok("glFramebufferRenderbuffer"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 
-		m_FBOTexture = glGenTextures();
+		a_eye.m_fbo_texture = glGenTextures();
 		if (!GLok("glGenTextures"))
-			return 0;
-		glBindTexture(GL_TEXTURE_2D, m_FBOTexture);
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
+		glBindTexture(GL_TEXTURE_2D, a_eye.m_fbo_texture);
 		if (!GLok("glBindTexture"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		if (!GLok("GL_TEXTURE_MIN_FILTER"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		if (!GLok("GL_TEXTURE_MAG_FILTER"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 		if (!GLok("GL_TEXTURE_BASE_LEVEL"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 		if (!GLok("GL_TEXTURE_MAX_LEVEL"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 		
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, a_width, a_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, (java.nio.ByteBuffer)null);
 		if (!GLok("glTexImage2D"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 		
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_FBOTexture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, a_eye.m_fbo_texture, 0);
 		if (!GLok("glFramebufferTexture2D"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 		
 		int l_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
 		glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 		if (!GLok("glBindFramebuffer"))
-			return 0;
+		{
+			a_eye.m_fbo = 0;
+			return;
+		}
 		glBindTexture(GL_TEXTURE_2D, 0);
 		if (!GLok("glBindTexture"))
-			return 0;
-		
-		if(l_err == GL_FRAMEBUFFER_COMPLETE)
 		{
-			System.out.println("Framebuffer creation successful");
-			return l_fbo;
+			a_eye.m_fbo = 0;
+			return;
+		}
+		
+		if(l_err != GL_FRAMEBUFFER_COMPLETE)
+		{
+			a_eye.m_fbo = 0;
+			System.out.println("Failed to create FBO: "+l_err);
+			return;
 		}
 		else
 		{
-			System.out.println("Failed to create FBO: "+l_err);
-			return 0;
+			System.out.println("Framebuffer creation successful");
+			return;
 		}
 	}
 	
@@ -640,6 +660,38 @@ public class lwjgl_vr_test implements Runnable
 		return l_image;
 	}
 	
+	void HmdMatrix34toMatrix4f(HmdMatrix34 a_in, Matrix4f a_out)
+	{
+		a_out.set(a_in.m(0), a_in.m(4), a_in.m(8),  0f, 
+	              a_in.m(1), a_in.m(5), a_in.m(9),  0f, 
+	              a_in.m(2), a_in.m(6), a_in.m(10), 0f, 
+	              a_in.m(3), a_in.m(7), a_in.m(11), 1f);
+	}
+	
+	void HmdMatrix44toMatrix4f(HmdMatrix44 a_in, Matrix4f a_out)
+	{
+		a_out.set(a_in.m(0), a_in.m(4), a_in.m(8),  a_in.m(12), 
+	              a_in.m(1), a_in.m(5), a_in.m(9),  a_in.m(13), 
+	              a_in.m(2), a_in.m(6), a_in.m(10), a_in.m(14), 
+	              a_in.m(3), a_in.m(7), a_in.m(11), a_in.m(15)); 
+	}
+	/*
+	void HmdMatrix34toMatrix4f(HmdMatrix34 a_in, Matrix4f a_out)
+	{
+		a_out.set(a_in.m(0), a_in.m(1), a_in.m(2), a_in.m(3), 
+	            a_in.m(4), a_in.m(5), a_in.m(6), a_in.m(7), 
+	            a_in.m(8), a_in.m(9), a_in.m(10), a_in.m(11), 
+	            0f, 0f, 0f, 1f);
+	}
+	
+	void HmdMatrix44toMatrix4f(HmdMatrix44 a_in, Matrix4f a_out)
+	{
+		a_out.set(a_in.m(0), a_in.m(1), a_in.m(2), a_in.m(3), 
+	            a_in.m(4), a_in.m(5), a_in.m(6), a_in.m(7), 
+	            a_in.m(8), a_in.m(9), a_in.m(10), a_in.m(11), 
+	            a_in.m(12), a_in.m(13), a_in.m(14), a_in.m(14)); 
+	}
+	*/
 	@Override
 	public void run()
 	{
@@ -648,13 +700,18 @@ public class lwjgl_vr_test implements Runnable
 		System.out.println("Run");
 		float scale = java.awt.Toolkit.getDefaultToolkit().getScreenResolution() / 96.0f;
 		System.out.println("Res: " + java.awt.Toolkit.getDefaultToolkit().getScreenResolution());
-		displayW = 1000;
-		displayH = 680;
 		
 		System.err.println("VR_IsRuntimeInstalled() = " + VR_IsRuntimeInstalled());
 		System.err.println("VR_RuntimePath() = " + VR_RuntimePath());
 		System.err.println("VR_IsHmdPresent() = " + VR_IsHmdPresent());
 
+		int l_hmd_width = 16;
+		int l_hmd_height = 16;
+		
+		m_left_eye = new Eye(VR.EVREye_Eye_Left);
+		m_right_eye = new Eye(VR.EVREye_Eye_Right);
+		m_left_eye.m_eye = VR.EVREye_Eye_Left;
+		m_right_eye.m_eye = VR.EVREye_Eye_Right;
 		
 		try (MemoryStack stack = stackPush())
 		{
@@ -675,14 +732,17 @@ public class lwjgl_vr_test implements Runnable
 	  			VRSystem_GetRecommendedRenderTargetSize(w, h);
 	  			System.err.println("Recommended width : " + w.get(0));
 	  			System.err.println("Recommended height: " + h.get(0));
-	  			m_FBOwidth = w.get(0);
-	  			m_FBOheight = h.get(0);
+	  			l_hmd_width = w.get(0);
+	  			l_hmd_height = h.get(0);
+	  			displayW = l_hmd_width/2;
+	  			displayH = l_hmd_height/2;
 			} else
 			{
 				System.out.println("INIT ERROR SYMBOL: " +
 						VR_GetVRInitErrorAsSymbol(peError.get(0)));
 				System.out.println("INIT ERROR  DESCR: " +
 						VR_GetVRInitErrorAsEnglishDescription(peError.get(0)));
+				System.exit(2);
 			}
 		}
 		
@@ -825,8 +885,15 @@ public class lwjgl_vr_test implements Runnable
         
         glEnable(GL_DEBUG_OUTPUT);
 
-        m_fbo = makeFBOTexture(m_FBOwidth, m_FBOheight);
-		if(m_fbo == 0) System.exit(1);
+        makeFBOTexture(m_left_eye, l_hmd_width, l_hmd_height);
+        if(m_left_eye.m_fbo == 0) System.exit(1);
+        makeFBOTexture(m_right_eye, l_hmd_width, l_hmd_height);
+        if(m_right_eye.m_fbo == 0) System.exit(1);
+		glViewport(0, 0, l_hmd_width, l_hmd_height);
+		if(!GLok("glViewport"))
+		{
+			return;
+		}
 		
 		glfwShowWindow(m_window);
 		
@@ -858,32 +925,69 @@ public class lwjgl_vr_test implements Runnable
 					e.printStackTrace();
 				}
 			} else {*/
-				// Screen
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				render(/*m_egl, m_gles*/);
-				glfwSwapBuffers(m_window);
-				
-				// HMD
-				
-
-				glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);				
-				render(/*m_egl, m_gles*/);
-				glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				
-				Texture l_left_tx = Texture.create();
-				Texture l_right_tx = Texture.create();
-				l_left_tx.set(m_FBOTexture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
-				l_right_tx.set(m_FBOTexture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
-
 				TrackedDevicePose.Buffer tdpb = TrackedDevicePose.create(k_unMaxTrackedDeviceCount);
 				TrackedDevicePose.Buffer tdpb2 = TrackedDevicePose.create(k_unMaxTrackedDeviceCount);
 				 
 				VRCompositor.VRCompositor_WaitGetPoses(tdpb, tdpb2);
 				
-				int l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Left, l_left_tx, null, VR.EVRSubmitFlags_Submit_Default);
-				System.err.println("Left sub said: "+l_ret);
-				l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_right_tx, null, VR.EVRSubmitFlags_Submit_Default);
-				System.err.println("Right sub said: "+l_ret);
+				for(int i=0; i<VR.k_unMaxTrackedDeviceCount; ++i)
+				{
+/*					if(tdpb.get(i).bDeviceIsConnected())
+					{
+						System.out.println("Device "+i+" is of type "+VRSystem.VRSystem_GetTrackedDeviceClass(i));
+					}*/
+				}
+				
+				if(tdpb.get(VR.k_unTrackedDeviceIndex_Hmd).bPoseIsValid())
+				{
+					HmdMatrix34 l_headposition_matrix =  tdpb.get(VR.k_unTrackedDeviceIndex_Hmd).mDeviceToAbsoluteTracking();
+					HmdMatrix34toMatrix4f(l_headposition_matrix, m_left_eye.m_headposition_matrix);
+					m_left_eye.m_headposition_matrix.invert();
+					m_right_eye.m_headposition_matrix.set(m_left_eye.m_headposition_matrix);
+				}
+				else
+				{
+					System.out.println("No head pos");
+					m_left_eye.m_headposition_matrix = m_right_eye.m_headposition_matrix = new Matrix4f();
+				}
+				
+				HmdMatrix44 l_mat44 = HmdMatrix44.create();
+				HmdMatrix34 l_mat34 = HmdMatrix34.create();
+				
+				l_mat44 = VRSystem.VRSystem_GetProjectionMatrix(m_left_eye.m_eye, 1.0f, 30.0f, l_mat44);
+				HmdMatrix44toMatrix4f(l_mat44, m_left_eye.m_projection_matrix);
+				m_left_eye.m_projection_matrix.invert();
+				l_mat34 = VRSystem.VRSystem_GetEyeToHeadTransform(m_left_eye.m_eye, l_mat34);
+				HmdMatrix34toMatrix4f(l_mat34, m_left_eye.m_eyetohead_matrix);
+				
+				l_mat44 = VRSystem.VRSystem_GetProjectionMatrix(m_right_eye.m_eye, 1.0f, 30.0f, l_mat44);
+				HmdMatrix44toMatrix4f(l_mat44, m_right_eye.m_projection_matrix);
+				m_right_eye.m_projection_matrix.invert();
+				l_mat34 = VRSystem.VRSystem_GetEyeToHeadTransform(m_right_eye.m_eye, l_mat34);
+				HmdMatrix34toMatrix4f(l_mat34, m_right_eye.m_eyetohead_matrix);
+				
+			// Screen
+				/*
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				render(m_left_eye);
+				glfwSwapBuffers(m_window);
+				*/
+				
+				glBindFramebuffer(GL_FRAMEBUFFER, m_left_eye.m_fbo);				
+				render(m_left_eye);
+				glBindFramebuffer(GL_FRAMEBUFFER, m_right_eye.m_fbo);				
+				render(m_right_eye);
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				
+				Texture l_left_tx = Texture.create();
+				Texture l_right_tx = Texture.create();
+				l_left_tx.set(m_left_eye.m_fbo_texture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
+				l_right_tx.set(m_right_eye.m_fbo_texture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
+
+				int l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_left_tx, null, VR.EVRSubmitFlags_Submit_Default);
+				if(l_ret != 0) System.err.println("Left sub said: "+l_ret);
+				l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Left, l_right_tx, null, VR.EVRSubmitFlags_Submit_Default);
+				if(l_ret != 0) System.err.println("Right sub said: "+l_ret);
 				
 //		}
 		}
