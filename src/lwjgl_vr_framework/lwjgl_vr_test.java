@@ -39,18 +39,16 @@ import org.lwjgl.BufferUtils;
 
 import org.lwjgl.opengles.*;
 import org.lwjgl.opengles.GLES.*;
-//import org.lwjgl.opengles.GLES32.*;
 import org.lwjgl.opengles.OESMapbuffer.*;
 import org.lwjgl.system.*;
 import org.lwjgl.egl.*;
 import org.lwjgl.glfw.*;
-//import org.lwjgl.opengl.GLUtil.*;
 
 import static org.lwjgl.glfw.Callbacks.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.glfw.GLFWNativeEGL.*;
 import static org.lwjgl.egl.EGL10.*;
-import static org.lwjgl.opengles.GLES32.*;
+import static org.lwjgl.opengles.GLES30.*;
 import static org.lwjgl.system.MemoryStack.*;
 import static org.lwjgl.system.MemoryUtil.*;
 import org.lwjgl.system.APIUtil.*;
@@ -78,6 +76,9 @@ public class lwjgl_vr_test implements Runnable
 		Configuration.DEBUG_STACK.set(true);
 		Configuration.DEBUG_STREAM.set(System.err);
 
+		System.loadLibrary("log4cplus");
+		System.loadLibrary("OPENGL32");
+		System.loadLibrary("libMaliEmulator");
 		System.loadLibrary("libGLESv2");
 		System.loadLibrary("libEGL");
 		
@@ -466,6 +467,7 @@ public class lwjgl_vr_test implements Runnable
         stream.printf("\t%s: %s\n", type, message);
     }
 
+    /*
     private static String getDebugSource(int source) {
         switch (source) {
             case GL_DEBUG_SOURCE_API:
@@ -520,7 +522,7 @@ public class lwjgl_vr_test implements Runnable
                 return APIUtil.apiUnknownToken(severity);
         }
     }
-
+*/
 	
 	
 	int m_FBOheight = 1080;
@@ -778,7 +780,7 @@ public class lwjgl_vr_test implements Runnable
 			}
 		}
 		
-        GLDebugMessageCallback proc = GLDebugMessageCallback.create((source, type, id, severity, length, message, userParam) -> {
+/*        GLDebugMessageCallback proc = GLDebugMessageCallback.create((source, type, id, severity, length, message, userParam) -> {
             System.err.println("[LWJGL] OpenGL debug message");
             printDetail(System.err, "ID", String.format("0x%X", id));
             printDetail(System.err, "Source", getDebugSource(source));
@@ -790,7 +792,7 @@ public class lwjgl_vr_test implements Runnable
         glDebugMessageCallback(proc, NULL);		
         
         glEnable(GL_DEBUG_OUTPUT);
-
+*/
         m_fbo = makeFBOTexture(m_FBOwidth, m_FBOheight);
 		if(m_fbo == 0) System.exit(1);
 		
@@ -834,19 +836,21 @@ public class lwjgl_vr_test implements Runnable
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);				
 				render(m_egl, m_gles);
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				
 				Texture l_left_tx = Texture.create();
 				Texture l_right_tx = Texture.create();
 				l_left_tx.set(m_FBOTexture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
-				l_right_tx.set(m_fbo, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
+				l_right_tx.set(m_FBOTexture, VR.ETextureType_TextureType_OpenGL, VR.EColorSpace_ColorSpace_Gamma);
 
 				TrackedDevicePose.Buffer tdpb = TrackedDevicePose.create(k_unMaxTrackedDeviceCount);
 				TrackedDevicePose.Buffer tdpb2 = TrackedDevicePose.create(k_unMaxTrackedDeviceCount);
 				 
 				VRCompositor.VRCompositor_WaitGetPoses(tdpb, tdpb2);
 				
-				int l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Left, l_left_tx, null, VR.EVRSubmitFlags_Submit_GlRenderBuffer);
+				int l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Left, l_left_tx, null, VR.EVRSubmitFlags_Submit_Default);
 				if(l_ret!=0) System.err.println("Left sub said: "+l_ret);
-				l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_right_tx, null, VR.EVRSubmitFlags_Submit_GlRenderBuffer);
+				l_ret = VRCompositor.VRCompositor_Submit(VR.EVREye_Eye_Right, l_right_tx, null, VR.EVRSubmitFlags_Submit_Default);
 				if(l_ret!=0) System.err.println("Right sub said: "+l_ret);
 				
 //		}
